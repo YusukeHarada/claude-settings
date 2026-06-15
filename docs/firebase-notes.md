@@ -7,6 +7,28 @@
 
 ## Authentication
 
+### `initializeAuth` で `signInWithPopup` が `auth/argument-error` で失敗する
+
+**症状**
+`initializeAuth` を使うと `signInWithPopup` が `auth/argument-error` で失敗する。
+
+**原因**
+`getAuth` はデフォルトで `browserPopupRedirectResolver` を含むが、`initializeAuth` は含まない。
+
+**解決策**
+`initializeAuth` を使う場合は `browserPopupRedirectResolver` を明示的に渡す。
+
+```typescript
+import { initializeAuth, browserPopupRedirectResolver } from 'firebase/auth';
+
+const auth = initializeAuth(app, {
+  persistence: browserLocalPersistence,
+  popupRedirectResolver: browserPopupRedirectResolver,
+});
+```
+
+---
+
 ### iOSでログイン後に「missing initial state」エラーが発生する
 
 **症状**
