@@ -1,15 +1,13 @@
 ---
-title: ''
+title: '' # 記事のタイトル
 tags:
-  - ''
-  - ''
-  - ''
-private: false
-updated_at: ''
-id: null
-organization_url_name: null
-slide: false
-ignorePublish: false
+  - '' # タグ（最大5つ）
+private: false # true: 限定共有 / false: 公開
+updated_at: '' # 投稿時に自動更新
+id: null # 投稿時に自動設定
+organization_url_name: null # 関連 Organization の URL 名
+slide: false # true: スライドモード ON
+ignorePublish: false # true: publish コマンドで無視される
 ---
 
 ## はじめに

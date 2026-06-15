@@ -119,5 +119,14 @@ permissions:
 - `viewport` は `app/layout.tsx` で明示的にエクスポートする（Next.js 14 以降の要件）
 
 ## Qiita
-- 記事の公開は Qiita CLI を使う（`npx qiita preview` で確認後、`npx qiita publish` で公開）
+
+```bash
+npx qiita new 記事のベース名   # 記事ファイルを新規作成（public/ に配置される）
+npx qiita preview             # プレビュー起動（http://localhost:8888）
+npx qiita publish 記事のベース名  # 記事を投稿・更新
+npx qiita publish --all       # 全記事を投稿・更新
+```
+
 - 記事ファイルは `public/` ディレクトリに配置する
+- ファイル名は `YYMMDD-slug.md` の形式にする
+- 記事の雛形は `~/develop/claude-settings/docs/qiita-article-template.md` を参照
