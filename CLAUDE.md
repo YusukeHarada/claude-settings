@@ -14,6 +14,12 @@
 - コード変更後は必ずテストを実行して通過を確認する
 - 不要な抽象化・将来のための設計はしない
 
+## テスト方針
+
+- 対象: ビジネスロジック（`src/lib/`）
+- 対象外: UI コンポーネント（`npm run dev` で目視確認）
+- 外部サービス（Firebase・API 等）は `__mocks__/` でモック化
+
 ## Code style
 - インデント：4スペース（言語問わず）
 - コメントは WHY が非自明な場合のみ（WHAT は書かない）
@@ -21,11 +27,11 @@
 - TypeScript strict mode を常に維持（`any` 禁止）
 - UIテキストは日本語
 
-## Architecture（Next.js + Firebase）
-- Firestoreアクセスは `src/lib/firestore/` に集約し、コンポーネントから直接叩かない
-- すべての Firestore パス文字列は `src/lib/firebase/paths.ts` の `fsPath` オブジェクトで一元管理する（タイポ防止）
-- ドメインロジック（計算・集計など）は `src/lib/utils/` に純粋関数として実装しテスト対象にする
-- Firebase Admin SDK はサーバーサイド（APIルート）専用。クライアントバンドルに含めない。環境変数 `FIREBASE_SERVICE_ACCOUNT_KEY` が必要
+## Architecture
+- Firestoreアクセスは専用レイヤーに集約し、コンポーネントから直接叩かない
+- Firestoreのコレクションパス文字列は定数として一元管理する（タイポ防止）
+- ドメインロジック（計算・集計など）は純粋関数として実装しテスト対象にする
+- Firebase Admin SDK はサーバーサイド（APIルート）専用。クライアントバンドルに含めない
 - コード変更後は以下の順で確認してからコミットする:
 
   ```bash
@@ -33,35 +39,6 @@
   npm run test:run
   npm run build
   ```
-
-## Tailwind CSS v4
-
-- CSS変数とユーティリティクラスのマッピングは `globals.css` の `@theme inline {}` ブロックで行う
-- カラーは oklch を使う（例: `oklch(0.40 0.125 148)`）
-- `card` などのカスタムクラスは `globals.css` に `box-shadow` やホバートランジションと一緒に定義し、コンポーネントで `className="card ..."` として使う
-
-## iOS Safari 対応（Next.js PWA）
-
-- `viewport` は `app/layout.tsx` で明示的にエクスポートする（未設定だと iOS Safari が 980px ビューポートで描画することがある）
-- `<input>` / `<select>` / `<textarea>` の `font-size` は 16px（`text-base`）以上にする（14px 未満だとフォーカス時にオートズームし、フォーカスを外しても戻らないことがある）
-- `overflow-x: hidden` を `html`/`body` に設定するとピンチズームが完全に無効になる。横オーバーフロー制御には `overflow-x: clip` を使う
-- `overscroll-behavior-x: none` を `html`/`body` に設定して横ドリフトを防止する
-- `viewportFit: "cover"` は `env(safe-area-inset-*)` の padding を実装しない限り設定しない（有害）
-- flex コンテナ内の `<Link>` には `block w-full` を付ける（デフォルトの `display: inline` だと iOS Safari で幅計算が狂う）
-- flex 内で `truncate` を使う要素には `min-w-0` を付ける
-
-## レイアウトパターン（モバイルファースト）
-
-- `html`/`body` を `h-dvh` にしてビューポート高さを固定する
-- `<main>` は `overflow-y-auto` のスクロールコンテナにし、`min-h-0` を必ず付ける（flex child のデフォルト `min-height: auto` を打ち消すため）
-- BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付けてコンテンツが隠れないようにする
-- `getUserMedia`（バーコードスキャン等）は iOS Safari の制約でユーザー操作の同期コンテキストで呼ぶ必要がある（非同期に遅延させると失敗する）
-
-## テスト方針
-
-- 対象: ビジネスロジック（`src/lib/`）
-- 対象外: UI コンポーネント（`npm run dev` で目視確認）
-- 外部サービス（Firebase・API 等）は `__mocks__/` でモック化
 
 ## Git
 - feature ブランチは `main` から作成する
@@ -120,6 +97,26 @@ permissions:
 - 結論を先に書き、理由・背景を後に続ける
 - コードブロックは積極的に使う
 - ファイルに残すドキュメントでは太字（**）を多用しない
+
+## iOS Safari 対応（Next.js PWA）
+
+詳細は `docs/nextjs-notes.md` を参照。主な注意点：
+
+- `<input>` / `<select>` / `<textarea>` の `font-size` は 16px 以上（未満だとオートズーム）
+- `overflow-x: clip` を使う（`hidden` だとピンチズームが無効になる）
+- `overscroll-behavior-x: none` で横ドリフトを防止する
+- `viewportFit: "cover"` は `env(safe-area-inset-*)` を実装しない限り設定しない
+- flex 内の `<Link>` に `block w-full`、`truncate` 要素に `min-w-0`
+- `getUserMedia` はユーザー操作の同期コンテキストで呼ぶ
+
+## レイアウトパターン（Next.js モバイルファースト）
+
+詳細は `docs/nextjs-notes.md` を参照。主な注意点：
+
+- `html`/`body` を `h-dvh` にしてビューポート高さを固定する
+- `<main>` は `overflow-y-auto` のスクロールコンテナにし、`min-h-0` を必ず付ける
+- BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付ける
+- `viewport` は `app/layout.tsx` で明示的にエクスポートする（Next.js 14 以降の要件）
 
 ## Qiita
 - 記事の公開は Qiita CLI を使う（`npx qiita preview` で確認後、`npx qiita publish` で公開）
