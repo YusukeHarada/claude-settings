@@ -19,6 +19,7 @@
 - コメントは WHY が非自明な場合のみ（WHAT は書かない）
 - エラーハンドリングは境界（ユーザー入力・外部 API）のみ
 - TypeScript strict mode を常に維持（`any` 禁止）
+- UIテキストは日本語
 
 ## Architecture（Next.js + Firebase）
 - Firestoreアクセスは `src/lib/firestore/` に集約し、コンポーネントから直接叩かない
@@ -56,6 +57,12 @@
 - BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付けてコンテンツが隠れないようにする
 - `getUserMedia`（バーコードスキャン等）は iOS Safari の制約でユーザー操作の同期コンテキストで呼ぶ必要がある（非同期に遅延させると失敗する）
 
+## テスト方針
+
+- 対象: ビジネスロジック（`src/lib/`）
+- 対象外: UI コンポーネント（`npm run dev` で目視確認）
+- 外部サービス（Firebase・API 等）は `__mocks__/` でモック化
+
 ## Git
 - feature ブランチは `main` から作成する
 - コミットメッセージは「何をしたか」より「なぜしたか」を重視、日本語でよい
@@ -83,6 +90,31 @@ gh auth login
 
 - 初回セットアップ時は `repo` スコープで認証する（privateリポジトリを操作するために必要）
 - すべての操作は YusukeHarada 名義として GitHub に記録される
+
+### Private リポジトリの注意点
+
+`public_repo` スコープでは読み書きできない。必ず `repo` スコープを使う。
+
+| スコープ | Public | Private |
+|---|---|---|
+| `public_repo` | 読み書き可 | 不可 |
+| `repo` | 読み書き可 | 読み書き可 ✓ |
+
+```bash
+gh auth status              # 現在のスコープを確認（'repo' が含まれていれば OK）
+gh auth refresh --scopes repo  # スコープを追加して再認証
+```
+
+GitHub Actions の無料枠はプランによって異なる（GitHub Free: 月 2,000 分）。
+使用量は GitHub → Settings → Billing & plans → Actions で確認できる。
+
+GitHub Actions で PR 作成・書き込みが必要なワークフローには権限を明示する。
+
+```yaml
+permissions:
+  contents: write
+  pull-requests: write
+```
 
 ## Output style
 - 結論を先に書き、理由・背景を後に続ける
