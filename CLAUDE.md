@@ -116,7 +116,7 @@ permissions:
 - `html`/`body` を `h-dvh` にしてビューポート高さを固定する
 - `<main>` は `overflow-y-auto` のスクロールコンテナにし、`min-h-0` を必ず付ける
 - BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付ける
-- `viewport` は `app/layout.tsx` で明示的にエクスポートする（Next.js 15 以降の要件）
+- `viewport` は `app/layout.tsx` で明示的にエクスポートする（Next.js 14 以降の要件）
 
 ## Qiita
 - 記事の公開は Qiita CLI を使う（`npx qiita preview` で確認後、`npx qiita publish` で公開）
