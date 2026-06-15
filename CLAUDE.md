@@ -18,6 +18,35 @@
 - インデント：4スペース（言語問わず）
 - コメントは WHY が非自明な場合のみ（WHAT は書かない）
 - エラーハンドリングは境界（ユーザー入力・外部 API）のみ
+- TypeScript strict mode を常に維持（`any` 禁止）
+
+## Architecture（Next.js + Firebase）
+- Firestoreアクセスは `src/lib/firestore/` に集約し、コンポーネントから直接叩かない
+- ドメインロジック（計算・集計など）は `src/lib/utils/` に純粋関数として実装しテスト対象にする
+- コード変更後は以下の順で確認してからコミットする:
+
+  ```bash
+  npx tsc --noEmit
+  npm run test:run
+  npm run build
+  ```
+
+## iOS Safari 対応（Next.js PWA）
+
+- `viewport` は `app/layout.tsx` で明示的にエクスポートする（未設定だと iOS Safari が 980px ビューポートで描画することがある）
+- `<input>` / `<select>` / `<textarea>` の `font-size` は 16px（`text-base`）以上にする（14px 未満だとフォーカス時にオートズームし、フォーカスを外しても戻らないことがある）
+- `overflow-x: hidden` を `html`/`body` に設定するとピンチズームが完全に無効になる。横オーバーフロー制御には `overflow-x: clip` を使う
+- `overscroll-behavior-x: none` を `html`/`body` に設定して横ドリフトを防止する
+- `viewportFit: "cover"` は `env(safe-area-inset-*)` の padding を実装しない限り設定しない（有害）
+- flex コンテナ内の `<Link>` には `block w-full` を付ける（デフォルトの `display: inline` だと iOS Safari で幅計算が狂う）
+- flex 内で `truncate` を使う要素には `min-w-0` を付ける
+
+## レイアウトパターン（モバイルファースト）
+
+- `html`/`body` を `h-dvh` にしてビューポート高さを固定する
+- `<main>` は `overflow-y-auto` のスクロールコンテナにし、`min-h-0` を必ず付ける（flex child のデフォルト `min-height: auto` を打ち消すため）
+- BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付けてコンテンツが隠れないようにする
+- `getUserMedia`（バーコードスキャン等）は iOS Safari の制約でユーザー操作の同期コンテキストで呼ぶ必要がある（非同期に遅延させると失敗する）
 
 ## Git
 - feature ブランチは `main` から作成する
