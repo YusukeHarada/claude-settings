@@ -27,7 +27,7 @@
 - TypeScript strict mode を常に維持（`any` 禁止）
 - UIテキストは日本語
 
-## Architecture
+## Architecture（Next.js + Firebase）
 - Firestoreアクセスは専用レイヤーに集約し、コンポーネントから直接叩かない
 - Firestoreのコレクションパス文字列は定数として一元管理する（タイポ防止）
 - ドメインロジック（計算・集計など）は純粋関数として実装しテスト対象にする
