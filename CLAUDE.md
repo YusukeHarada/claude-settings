@@ -22,7 +22,9 @@
 
 ## Architecture（Next.js + Firebase）
 - Firestoreアクセスは `src/lib/firestore/` に集約し、コンポーネントから直接叩かない
+- すべての Firestore パス文字列は `src/lib/firebase/paths.ts` の `fsPath` オブジェクトで一元管理する（タイポ防止）
 - ドメインロジック（計算・集計など）は `src/lib/utils/` に純粋関数として実装しテスト対象にする
+- Firebase Admin SDK はサーバーサイド（APIルート）専用。クライアントバンドルに含めない。環境変数 `FIREBASE_SERVICE_ACCOUNT_KEY` が必要
 - コード変更後は以下の順で確認してからコミットする:
 
   ```bash
@@ -30,6 +32,12 @@
   npm run test:run
   npm run build
   ```
+
+## Tailwind CSS v4
+
+- CSS変数とユーティリティクラスのマッピングは `globals.css` の `@theme inline {}` ブロックで行う
+- カラーは oklch を使う（例: `oklch(0.40 0.125 148)`）
+- `card` などのカスタムクラスは `globals.css` に `box-shadow` やホバートランジションと一緒に定義し、コンポーネントで `className="card ..."` として使う
 
 ## iOS Safari 対応（Next.js PWA）
 
