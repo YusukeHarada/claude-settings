@@ -10,6 +10,7 @@
 CLAUDE.md                         # 全プロジェクト共通の開発ガイドライン（Claude Code が自動参照）
 docs/
   project-claude-template.md     # 新規プロジェクト CLAUDE.md のテンプレート
+  qiita-article-template.md      # Qiita 記事のテンプレート
   firebase-notes.md              # Firebase のハマりパターン・注意事項
   nextjs-notes.md                # Next.js のハマりパターン・注意事項
   ui-notes.md                    # モバイル Web UI のハマりパターン・注意事項
