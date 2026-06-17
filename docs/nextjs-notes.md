@@ -173,3 +173,23 @@ async function handleOpenScanner() {
   setDialogOpen(true)
 }
 ```
+
+---
+
+## セットアップ
+
+### App Router の route group と root の `page.tsx` が競合する
+
+**症状**
+`src/app/page.tsx`（root）と `src/app/(app)/page.tsx`（route group）が共存すると、`/` へのアクセスでルーティングが競合してエラーになる。
+
+**原因**
+Next.js App Router の route group（`(app)` のような括弧付きディレクトリ）はURLパスに影響しない。そのため `(app)/page.tsx` は `/` として解決され、`app/page.tsx` と衝突する。
+
+**解決策**
+route group にページを移した後は root の `src/app/page.tsx` を削除する。
+
+```bash
+# (app)/page.tsx にタスク一覧を実装したら root の page.tsx は不要
+rm src/app/page.tsx
+```
