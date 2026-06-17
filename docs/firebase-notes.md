@@ -472,3 +472,100 @@ apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? 'placeholder-api-key',
 // OK: '' もフォールバックされる
 apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'placeholder-api-key',
 ```
+
+---
+
+## ローカルファースト開発
+
+### Firebase を後回しにしてUI・ロジックを先に固める
+
+**なぜやるか**
+Firebase の設定ミス・セキュリティルール・`onSnapshot` のエラー処理など、DB 起因の問題がUIの確認を詰まらせる。ロジックとUIが正しくても「DBのせいで動かない」状態になりやすいため、まずローカルデータで動作確認してから Firebase に切り替える。
+
+**前提: Context がインターフェースになっている**
+
+コンポーネントが Context しか触らない設計（推奨）であれば、Context の中身を差し替えるだけで切り替えられる。
+
+```
+コンポーネント → Context（差し替えポイント）→ Firebase / ローカルデータ
+```
+
+**ローカル版 Context の実装**
+
+`onSnapshot` の代わりに `useState` でデータを管理する。インターフェース（`tasks`, `loading`, `error`）は Firebase 版と同じに保つ。
+
+```typescript
+// contexts/TasksContext.local.tsx
+"use client";
+
+import { createContext, useContext, useState } from "react";
+import type { Task } from "@/types/task";
+
+type TasksState = { tasks: Task[]; loading: boolean; error: string | null };
+const TasksContext = createContext<TasksState>({ tasks: [], loading: false, error: null });
+
+const SAMPLE_TASKS: Task[] = [
+    {
+        id: "1",
+        userId: "local",
+        title: "サンプルタスク",
+        description: "",
+        completed: false,
+        priority: "medium",
+        categoryId: null,
+        dueDate: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    },
+];
+
+export function LocalTasksProvider({ children }: { children: React.ReactNode }) {
+    const [tasks] = useState<Task[]>(SAMPLE_TASKS);
+    return (
+        <TasksContext.Provider value={{ tasks, loading: false, error: null }}>
+            {children}
+        </TasksContext.Provider>
+    );
+}
+
+export function useTasks() {
+    return useContext(TasksContext);
+}
+```
+
+**切り替え方法**
+
+環境変数で Provider を切り替える。`.env.local` に `NEXT_PUBLIC_DATA_SOURCE=local` を追加するだけで有効になる。
+
+```typescript
+// components/layout/AppClientLayout.tsx
+import { TasksProvider } from "@/contexts/TasksContext";
+import { LocalTasksProvider } from "@/contexts/TasksContext.local";
+
+const Tasks = process.env.NEXT_PUBLIC_DATA_SOURCE === "local"
+    ? LocalTasksProvider
+    : TasksProvider;
+
+export default function AppClientLayout({ children }) {
+    return (
+        <AuthProvider>
+            <Tasks>
+                {children}
+            </Tasks>
+        </AuthProvider>
+    );
+}
+```
+
+```bash
+# .env.local
+NEXT_PUBLIC_DATA_SOURCE=local   # ローカルデータで動作確認
+# NEXT_PUBLIC_DATA_SOURCE=      # コメントアウトで Firebase に切り替え
+```
+
+**開発フロー**
+
+1. ローカル版 Context を書いてサンプルデータを入れる
+2. UI・ロジック・バリデーションを確認する（Firebase 設定不要）
+3. 問題なければ Firebase 版 Context を実装して切り替える
+4. Firebase 特有の問題（セキュリティルール・`onSnapshot` エラー処理）をここで対処する
