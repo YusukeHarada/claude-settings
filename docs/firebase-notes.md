@@ -346,6 +346,112 @@ export async function POST(request: NextRequest) {
 
 ---
 
+## Next.js + Firebase 統合
+
+### Next.js App Router で Firebase Client SDK が SSR 時に初期化エラーになる
+
+**症状**
+`npm run build` や SSR 時に `auth/invalid-api-key` や `INTERNAL ASSERTION FAILED: Expected a class definition` エラーが出る。ローカルの `npm run dev` では問題ない。
+
+**原因**
+Next.js App Router は `"use client"` を付けたコンポーネントもビルド時にサーバー側でレンダリングする。Firebase Client SDK はブラウザ API（`window`、`indexedDB` 等）に依存しているため、Node.js 環境で実行すると内部アサーションが失敗する。
+
+**解決策**
+Firebase に依存するコンポーネントを `dynamic(() => import(...), { ssr: false })` でラップし、サーバー上での実行を防ぐ。このとき呼び出し元のコンポーネントも `"use client"` が必要（Server Component では `ssr: false` を使えない）。
+
+```typescript
+// app/(app)/layout.tsx
+"use client"; // ← dynamic ssr:false を使うために必要
+
+import dynamic from "next/dynamic";
+
+const AppClientLayout = dynamic(
+  () => import("@/components/layout/AppClientLayout"),
+  { ssr: false }
+);
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return <AppClientLayout>{children}</AppClientLayout>;
+}
+```
+
+```typescript
+// components/layout/AppClientLayout.tsx
+"use client";
+
+// Firebase の Context Provider や Auth Guard などをここに集約する
+export default function AppClientLayout({ children }) {
+  return (
+    <AuthProvider>
+      <AppGuard>{children}</AppGuard>
+    </AuthProvider>
+  );
+}
+```
+
+---
+
+### `onSnapshot` クエリが `where` 句なしだとセキュリティルールで弾かれる
+
+**症状**
+ユーザーはログイン済みなのに `onSnapshot` のエラーコールバックが "Missing or insufficient permissions" で発火し、データが表示されない。
+
+**原因**
+Firestore のセキュリティルールが `resource.data.userId == request.auth.uid` で保護されている場合、コレクション全体を対象にしたクエリ（`where` なし）は「このクエリは権限のないドキュメントを返す可能性がある」と判定されて拒否される。ドキュメントを個別に読んだとき通るルールでも、クエリレベルでは別評価になる。
+
+**解決策**
+`onSnapshot` のクエリには必ず `where("userId", "==", userId)` を付けて、セキュリティルールが評価できる形に絞り込む。
+
+```typescript
+// NG: コレクション全体を読もうとしてルールに弾かれる
+const q = collection(db, "tasks");
+
+// OK: userId で絞り込めばルールが通る
+const q = query(
+  collection(db, "tasks"),
+  where("userId", "==", userId)
+);
+
+onSnapshot(q, (snap) => { /* ... */ });
+```
+
+---
+
+### `onSnapshot` のエラーが無音で消えてデータが表示されない
+
+**症状**
+`onSnapshot` を設定してもデータが表示されず、コンソールにも何も出ない。UI もエラー表示のままにならない。
+
+**原因**
+`onSnapshot` の第 2 引数（エラーコールバック）を省略すると、セキュリティルールエラーやクエリエラーが無音で捨てられる。
+
+**解決策**
+エラーコールバックを必ず渡し、Context の `error` state に反映して UI でも表示する。
+
+```typescript
+// NG: エラーコールバックなし → エラーが消える
+onSnapshot(q, (snap) => {
+  setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task)));
+});
+
+// OK: エラーコールバックを渡して state に反映する
+onSnapshot(
+  q,
+  (snap) => {
+    setTasks(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task)));
+    setLoading(false);
+  },
+  (err) => {
+    setError(err.message);
+    setLoading(false);
+  }
+);
+```
+
+エラーを Context に持たせて UI に表示することで、問題の発見が早くなる。
+
+---
+
 ## CI/CD
 
 ### CI 環境で Firebase 環境変数が空文字列になると初期化エラー
