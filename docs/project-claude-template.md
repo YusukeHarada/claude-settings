@@ -1,5 +1,11 @@
 # {プロジェクト名} — CLAUDE.md
 
+<!-- 必要なノートのコメントアウトを外してインポートする -->
+<!-- @import ~/develop/claude-settings/docs/firebase-notes.md -->
+<!-- @import ~/develop/claude-settings/docs/nextjs-notes.md -->
+<!-- @import ~/develop/claude-settings/docs/github-notes.md -->
+<!-- @import ~/develop/claude-settings/docs/ui-notes.md -->
+
 ## プロジェクト概要
 
 {1〜3行でアプリの目的・対象ユーザーを説明する}
