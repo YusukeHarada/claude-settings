@@ -36,6 +36,7 @@
 - Firestore の日時フィールドは `serverTimestamp()` で書き込む（クライアント時刻はタイムゾーンズレのリスクがある）
 - Firestore 取得時は `FirestoreDataConverter` で型変換し、UI側で `.toDate()` を呼ばない設計にする
 - **開発順序**: まずローカルデータで Context を実装し、UI・ロジックを確認してから Firebase 実装に切り替える。DBの問題でUIの確認が詰まるのを防ぐ。詳細は `docs/firebase-notes.md` の「ローカルファースト開発」を参照
+- その他の Firebase 固有の知見・ハマりパターンは `docs/firebase-notes.md` を参照
 
 - コード変更後は以下の順で確認してからコミットする:
 
@@ -75,19 +76,7 @@ gh auth status
 gh auth login
 ```
 
-GitHub Actions でワークフローに権限を明示する。
-
-```yaml
-# PR 作成・CI 確認のみ（リポジトリへの書き込み不要）
-permissions:
-  contents: read
-  pull-requests: write
-
-# リリース成果物のアップロード等、リポジトリへの書き込みが必要な場合のみ
-permissions:
-  contents: write
-  pull-requests: write
-```
+GitHub Actions の権限設定は `docs/github-notes.md` を参照。
 
 ## Output style
 - 結論を先に書き、理由・背景を後に続ける
