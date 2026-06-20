@@ -12,6 +12,7 @@ docs/
   project-claude-template.md     # 新規プロジェクト CLAUDE.md のテンプレート
   firebase-notes.md              # Firebase のハマりパターン・注意事項
   nextjs-notes.md                # Next.js のハマりパターン・注意事項
+  github-notes.md                # GitHub CLI・Git 運用のハマりパターン・注意事項
   ui-notes.md                    # モバイル Web UI のハマりパターン・注意事項
 ```
 

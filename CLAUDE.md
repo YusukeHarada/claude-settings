@@ -8,7 +8,7 @@
 - 作業前に実装計画を提示し、承認を得てから着手する
 - 仕様の曖昧さや不明点は計画時点で確認する（実装中に勝手に決めない）
 - 完了後に何をしたかサマリーを出す
-
+- テストが通っても、コミットはユーザーの承認後に行う
 
 ## Development approach
 - 仕様を先に決め、それに沿ったテストを設計してから実装する
@@ -17,9 +17,9 @@
 
 ## テスト方針
 
-- 対象: ビジネスロジック（`src/lib/`）
+- 対象: ビジネスロジック（ドメインロジック・純粋関数など）
 - 対象外: UI コンポーネント（`npm run dev` で目視確認）
-- 外部サービス（Firebase・API 等）は `__mocks__/` でモック化
+- 外部サービス（Firebase・API 等）はモックで分離する
 
 ## Code style
 - インデント：4スペース（言語問わず）
@@ -33,6 +33,8 @@
 - Firestoreのコレクションパス文字列は定数として一元管理する（タイポ防止）
 - ドメインロジック（計算・集計など）は純粋関数として実装しテスト対象にする
 - Firebase Admin SDK はサーバーサイド（APIルート）専用。クライアントバンドルに含めない
+- Firestore の日時フィールドは `serverTimestamp()` で書き込む（クライアント時刻はタイムゾーンズレのリスクがある）
+- Firestore 取得時は `FirestoreDataConverter` で型変換し、UI側で `.toDate()` を呼ばない設計にする
 - **開発順序**: まずローカルデータで Context を実装し、UI・ロジックを確認してから Firebase 実装に切り替える。DBの問題でUIの確認が詰まるのを防ぐ。詳細は `docs/firebase-notes.md` の「ローカルファースト開発」を参照
 
 - コード変更後は以下の順で確認してからコミットする:
@@ -44,20 +46,25 @@
   ```
 
 ## Git
-- feature ブランチは `main` から作成する
+- feature ブランチは `main` から作成する。命名規則: `feature/xxx`、`fix/xxx`
 - コミットメッセージは「何をしたか」より「なぜしたか」を重視、日本語でよい
 - PR タイトルは 70 文字以内
 - PR は自分でマージしない。ユーザーがレビュー・マージする
+- マージは squash merge を使う（`gh pr merge --squash --delete-branch`）
 
 ## GitHub CLI
 - GitHub のリモート操作は `gh` CLI を使う（MCP は使わない）
+- Private リポジトリ操作には `repo` スコープが必要。詳細は `docs/github-notes.md` を参照
 
 ```bash
-# PR 作成
-gh pr create --title "タイトル" --body "本文"
+# PR 作成（body テンプレートは docs/github-notes.md を参照）
+gh pr create --title "タイトル" --body "..."
 
-# PR 一覧
+# PR 確認・CI チェック
 gh pr list
+gh pr view <番号> --comments
+gh pr checks <番号>
+gh pr diff <番号>
 
 # Issue 一覧・作成
 gh issue list
@@ -68,29 +75,15 @@ gh auth status
 gh auth login
 ```
 
-- 初回セットアップ時は `repo` スコープで認証する（privateリポジトリを操作するために必要）
-- すべての操作は YusukeHarada 名義として GitHub に記録される
-
-### Private リポジトリの注意点
-
-`public_repo` スコープでは読み書きできない。必ず `repo` スコープを使う。
-
-| スコープ | Public | Private |
-|---|---|---|
-| `public_repo` | 読み書き可 | 不可 |
-| `repo` | 読み書き可 | 読み書き可 ✓ |
-
-```bash
-gh auth status              # 現在のスコープを確認（'repo' が含まれていれば OK）
-gh auth refresh --scopes repo  # スコープを追加して再認証
-```
-
-GitHub Actions の無料枠はプランによって異なる（GitHub Free: 月 2,000 分）。
-使用量は GitHub → Settings → Billing & plans → Actions で確認できる。
-
-GitHub Actions で PR 作成・書き込みが必要なワークフローには権限を明示する。
+GitHub Actions でワークフローに権限を明示する。
 
 ```yaml
+# PR 作成・CI 確認のみ（リポジトリへの書き込み不要）
+permissions:
+  contents: read
+  pull-requests: write
+
+# リリース成果物のアップロード等、リポジトリへの書き込みが必要な場合のみ
 permissions:
   contents: write
   pull-requests: write
@@ -101,25 +94,9 @@ permissions:
 - コードブロックは積極的に使う
 - ファイルに残すドキュメントでは太字（**）を多用しない
 
-## iOS Safari 対応（Next.js PWA）
+## iOS Safari 対応 / レイアウト（Next.js モバイルファースト）
 
-詳細は `docs/nextjs-notes.md` を参照。主な注意点：
-
-- `<input>` / `<select>` / `<textarea>` の `font-size` は 16px 以上（未満だとオートズーム）
-- `overflow-x: clip` を使う（`hidden` だとピンチズームが無効になる）
-- `overscroll-behavior-x: none` で横ドリフトを防止する
-- `viewportFit: "cover"` は `env(safe-area-inset-*)` を実装しない限り設定しない
-- flex 内の `<Link>` に `block w-full`、`truncate` 要素に `min-w-0`
-- `getUserMedia` はユーザー操作の同期コンテキストで呼ぶ
-
-## レイアウトパターン（Next.js モバイルファースト）
-
-詳細は `docs/nextjs-notes.md` を参照。主な注意点：
-
-- `html`/`body` を `h-dvh` にしてビューポート高さを固定する
-- `<main>` は `overflow-y-auto` のスクロールコンテナにし、`min-h-0` を必ず付ける
-- BottomNav は `fixed bottom-0 sm:hidden` で配置し、`<main>` に `pb-16` を付ける
-- `viewport` は `app/layout.tsx` で明示的にエクスポートする（Next.js 14 以降の要件）
+詳細は `docs/nextjs-notes.md` を参照。
 
 ## Qiita
 - 記事の公開は Qiita CLI を使う（`npx qiita preview` で確認後、`npx qiita publish` で公開）
