@@ -193,3 +193,68 @@ route group にページを移した後は root の `src/app/page.tsx` を削除
 # (app)/page.tsx にタスク一覧を実装したら root の page.tsx は不要
 rm src/app/page.tsx
 ```
+
+---
+
+## Vercel デプロイ
+
+### Next.js アプリがリポジトリのサブディレクトリにある場合の Vercel 設定
+
+**症状**
+Vercel にデプロイすると `404: NOT_FOUND` になる。
+
+**原因**
+Vercel はデフォルトでリポジトリルートから Next.js アプリを探す。アプリが `app/` などのサブディレクトリにある場合は見つけられない。
+
+**解決策 A（推奨）**: Vercel ダッシュボード → Settings → General → **Root Directory** を `app` に設定してから再デプロイ。
+
+**解決策 B**: アプリのサブディレクトリに `vercel.json` を追加して設定を明示する。
+
+```json
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next"
+}
+```
+
+Root Directory を変更した後は「Redeploy」ではなく git push で新規デプロイをトリガーすること（既存 Redeploy は旧設定のままになることがある）。
+
+---
+
+### `require()` で ES モジュールを読み込もうとして `is not a constructor` エラー
+
+**症状**
+`require("./someFile")` の返り値のクラスが `is not a constructor` になる。
+
+**原因**
+`export class` を使った TypeScript ファイルを `require()` で読もうとすると、ES モジュールの named export が CJS の `require()` と互換しない場合がある。特に Turbopack や Vercel 環境で発生しやすい。
+
+**解決策**
+`require()` の代わりに `dynamic import()` を使い、呼び出し元を `async` 関数にする。
+
+```typescript
+// NG
+const { MyClass } = require("./myModule")
+const instance = new MyClass()
+
+// OK
+const { MyClass } = await import("./myModule")
+const instance = new MyClass()
+```
+
+factory 関数を `async` にする必要があるため、呼び出し元全体（API ルートなど）も `await` に変更する。
+
+---
+
+### `serverExternalPackages` に指定してもネイティブモジュールが ESM エラーを起こす
+
+**症状**
+`serverExternalPackages: ["some-package"]` を設定しているのに、Vercel で `ERR_REQUIRE_ESM` エラーが発生する。
+
+**原因**
+`serverExternalPackages` は「バンドルしない」という指定であって、依存パッケージの ESM/CJS 問題は解決しない。依存チェーンの中に ESM only なパッケージが混在している場合は実行時にエラーになる。
+
+**解決策**
+問題のある依存を import しているファイルを特定し、不要なら import を削除する。`firebase-admin/auth` → `jwks-rsa` → `jose`（ESM）の依存チェーンが典型例（`firebase-notes.md` 参照）。

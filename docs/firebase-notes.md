@@ -717,3 +717,77 @@ NEXT_PUBLIC_DATA_SOURCE=   # 必ず空にして Firebase を使う
 2. UI・ロジック・バリデーションを確認する（Firebase 設定不要）
 3. 問題なければ Firebase 版 Context を実装して切り替える
 4. Firebase 特有の問題（セキュリティルール・`onSnapshot` エラー処理）をここで対処する
+
+---
+
+## Vercel デプロイ固有の問題
+
+### `firebase-admin/auth` の import で ERR_REQUIRE_ESM が発生する
+
+**症状**
+Vercel にデプロイすると以下のエラーで API が 500 になる。
+
+```
+Error: Failed to load external module firebase-admin/auth:
+Error [ERR_REQUIRE_ESM]: require() of ES Module jose/dist/webapi/index.js not supported.
+```
+
+**原因**
+`firebase-admin/auth` が依存する `jwks-rsa` が `jose`（ESM only）を CommonJS の `require()` で読もうとする。Vercel の Node.js 環境では ESM/CJS 混在がエラーになる。
+
+**解決策**
+サーバー側での Auth トークン検証が不要な場合は `firebase-admin/auth` を import しない。
+
+```typescript
+// NG: firebase-admin/auth を import すると jose の ESM エラーが発生する
+import { getAuth } from "firebase-admin/auth"
+
+// OK: Firestore のみ使う場合は auth を import しない
+import { getApps, initializeApp, getApp, cert } from "firebase-admin/app"
+import { getFirestore } from "firebase-admin/firestore"
+```
+
+将来 Auth 検証が必要になった場合は `firebase-admin` 全体のバージョンと `jose` / `jwks-rsa` の互換性を確認すること。
+
+---
+
+### Vercel 環境変数の private_key に含まれる `\n` が正しく変換されない
+
+**症状**
+ローカルでは動くが Vercel では Firebase Admin 初期化が失敗する。
+
+**原因**
+サービスアカウント JSON の `private_key` に含まれる改行は `\n` エスケープ文字。ローカルの `.env.local` では JSON.parse 時に自動変換されるが、Vercel の環境変数エディタを通すと `\\n`（バックスラッシュ + n のリテラル）のまま渡されることがある。
+
+**解決策**
+`JSON.parse` 後に明示的に置換する。
+
+```typescript
+const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY!)
+if (parsed.private_key) {
+    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n")
+}
+return initializeApp({ credential: cert(parsed) })
+```
+
+---
+
+### クライアント側 Firestore 初期化が postMessage 無限ループを引き起こす
+
+**症状**
+Firebase Client SDK を初期化するファイルで `getFirestore(app)` を呼んでいると、ブラウザのコンソールに `postMessage` が数百件連続して出力され、React のレンダリングがループする。
+
+**原因**
+クライアント側 Firestore を初期化すると Firestore WebChannel（gRPC 通信のブラウザ実装）が起動しサーバーへの接続を試みる。接続に失敗するとリトライが繰り返され `postMessage` ループになる。
+
+**解決策**
+Firestore アクセスを API ルート（Admin SDK）に限定している場合は、クライアント側で `getFirestore()` を呼ばない。
+
+```typescript
+// NG: クライアント側で Firestore を初期化しない
+export const db = getFirestore(app)
+
+// OK: Auth だけ初期化する
+export const auth = initializeAuth(app, { ... })
+// Firestore は API ルート（Admin SDK）経由でのみアクセスする
+```
