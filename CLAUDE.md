@@ -50,6 +50,7 @@
 - feature ブランチは `main` から作成する。命名規則: `feature/xxx`、`fix/xxx`
 - コミットメッセージは「何をしたか」より「なぜしたか」を重視、日本語でよい
 - PR タイトルは 70 文字以内
+- PR 作成前に `/code-review` でレビューを実施する
 - PR は自分でマージしない。ユーザーがレビュー・マージする
 - マージは squash merge を使う（`gh pr merge --squash --delete-branch`）
 
